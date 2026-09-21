@@ -1,7 +1,7 @@
 """
-Optimal Allocation of Consulting Resources Across Client Engagements
-Interactive Streamlit Application for Mixed-Integer Linear Programming (MILP) Decision Support.
-Strictly in Python with Streamlit frontend. Solved exclusively with IBM ILOG CPLEX.
+go, pal! Team Capacity & Client Allocation Model
+Mixed-Integer Linear Programming (MILP) decision support, strictly in Python
+with a Streamlit frontend. Solved exclusively with IBM ILOG CPLEX.
 """
 
 import base64
@@ -15,66 +15,106 @@ import plotly.graph_objects as go
 import model_data
 import solver
 
-LOGO_PATH = Path(__file__).parent / "assets" / "logo.jpg"
+LOGO_PATH = Path(__file__).parent / "assets" / "gopal-logo.png"
 LOGO_B64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+
+# ==========================================
+# BRAND PALETTE — go, pal!
+# Primary accent red + ink text, plus hues sampled directly from the logo file
+# (assets/gopal-logo.png) for the four team-member chart series. No purple.
+# ==========================================
+BRAND_RED = "#E03720"
+INK = "#17171A"
+INK_MUTED = "#5C5A57"
+INK_FAINT = "#8A8783"
+SURFACE = "#FFFFFF"
+SURFACE_MUTED = "#F5F4F2"
+BORDER = "#E4E1DE"
+
+# Sampled from the logo: red dot, green leaf, blue circles, yellow block.
+CONSULTANT_COLORS = {
+    "M": "#D6361F",   # red dot   — Parva Yadav
+    "A": "#3CB234",   # green leaf — Abhimanyu Vyas
+    "T": "#2D6FD2",   # blue circle — Vinayak Vishvakarma
+    "AI": "#B8860B",  # yellow block — Puneet Agarwal
+}
+PRIORITY_COLORS = {
+    "Strategic": "#E03720",
+    "Important": "#F1654F",
+    "Standard": "#F4907E",
+}
 
 # Page Configuration
 st.set_page_config(
-    page_title="Consulting Resource Optimization | MILP Decision Support",
+    page_title="go, pal! | Team Capacity Model",
     page_icon=str(LOGO_PATH),
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Sophisticated Custom CSS for Enterprise UI & Mobile Responsiveness
-st.markdown("""
+# go, pal! Custom CSS — Newsreader + Libre Franklin, red/ink brand palette, mobile responsive
+st.markdown(f"""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400..800;1,400..800&family=Libre+Franklin:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {{
+        font-family: 'Libre Franklin', -apple-system, BlinkMacSystemFont, sans-serif;
+    }}
+
     /* 1. Completely hide Streamlit sidebar and collapse control */
-    [data-testid="stSidebar"], [data-testid="collapsedControl"], section[data-testid="stSidebar"] {
+    [data-testid="stSidebar"], [data-testid="collapsedControl"], section[data-testid="stSidebar"] {{
         display: none !important;
-    }
-    
+    }}
+
     /* 2. Responsive Main Layout Padding */
-    .block-container {
+    .block-container {{
         padding-top: 1.5rem !important;
         padding-bottom: 2.5rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
         max-width: 1400px;
-    }
-    @media (max-width: 768px) {
-        .block-container {
+    }}
+    @media (max-width: 768px) {{
+        .block-container {{
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
             padding-top: 1rem !important;
-        }
-    }
+        }}
+    }}
 
-    /* 3. Executive Typography */
-    .main-header {
+    /* 3. Typography — Newsreader for display, Libre Franklin for body/UI */
+    .main-header {{
+        font-family: 'Newsreader', Georgia, serif;
         font-size: calc(1.5rem + 0.8vw);
-        font-weight: 800;
-        color: #1E40AF;
-        letter-spacing: -0.025em;
+        font-weight: 700;
+        color: {INK};
+        letter-spacing: -0.01em;
         line-height: 1.2;
         margin-bottom: 0.35rem;
-    }
-    .sub-header {
+    }}
+    .sub-header {{
         font-size: 0.95rem;
-        color: #475569;
+        color: {INK_MUTED};
         font-weight: 400;
         line-height: 1.5;
         margin-bottom: 1rem;
-    }
-    
+    }}
+    .tagline {{
+        font-family: 'Newsreader', Georgia, serif;
+        font-size: 1.05rem;
+        color: {BRAND_RED};
+        font-weight: 500;
+        margin-bottom: 0.15rem;
+    }}
+
     /* 4. Metadata Badge Pills */
-    .badge-container {
+    .badge-container {{
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         margin-bottom: 1rem;
-    }
-    .badge-pill {
+    }}
+    .badge-pill {{
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -84,136 +124,150 @@ st.markdown("""
         font-weight: 600;
         letter-spacing: 0.02em;
         white-space: nowrap;
-    }
-    .badge-blue {
-        background-color: #EFF6FF;
-        color: #1D4ED8;
-        border: 1px solid #BFDBFE;
-    }
-    .badge-green {
+    }}
+    .badge-red {{
+        background-color: #FCE9E6;
+        color: #A32B17;
+        border: 1px solid #F3B8AC;
+    }}
+    .badge-green {{
         background-color: #ECFDF5;
         color: #047857;
         border: 1px solid #A7F3D0;
-    }
-    .badge-purple {
-        background-color: #F5F3FF;
-        color: #6D28D9;
-        border: 1px solid #DDD6FE;
-    }
-    .badge-slate {
-        background-color: #F8FAFC;
-        color: #334155;
-        border: 1px solid #E2E8F0;
-    }
+    }}
+    .badge-gold {{
+        background-color: #FBF3D9;
+        color: #7A5C08;
+        border: 1px solid #EFDE9E;
+    }}
+    .badge-slate {{
+        background-color: {SURFACE_MUTED};
+        color: {INK_MUTED};
+        border: 1px solid {BORDER};
+    }}
 
     /* 5. Top Action Container Card */
-    .top-action-card {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+    .top-action-card {{
+        background: {SURFACE};
+        border: 1px solid {BORDER};
         border-radius: 12px;
         padding: 14px 18px;
         margin-bottom: 1.25rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-    }
+    }}
 
     /* 6. Executive KPI Metric Cards */
-    .kpi-grid {
+    .kpi-grid {{
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 12px;
         margin-bottom: 1.5rem;
-    }
-    .kpi-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
+    }}
+    .kpi-card {{
+        background-color: {SURFACE};
+        border: 1px solid {BORDER};
         border-radius: 12px;
         padding: 14px 16px;
         text-align: left;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        box-shadow: 0 1px 2px rgba(23, 23, 26, 0.04);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .kpi-card:hover {
-        border-color: #CBD5E1;
+    }}
+    .kpi-card:hover {{
+        border-color: #C9C6C2;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-    .kpi-label {
+    }}
+    .kpi-label {{
         font-size: 0.75rem;
-        color: #64748B;
+        color: {INK_FAINT};
         text-transform: uppercase;
         font-weight: 700;
         letter-spacing: 0.04em;
         margin-bottom: 4px;
-    }
-    .kpi-value {
-        font-size: 1.45rem;
-        font-weight: 800;
-        color: #0F172A;
+    }}
+    .kpi-value {{
+        font-family: 'Newsreader', Georgia, serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: {INK};
         line-height: 1.2;
-        letter-spacing: -0.02em;
-    }
-    .kpi-delta {
+        letter-spacing: -0.01em;
+    }}
+    .kpi-delta {{
         font-size: 0.78rem;
         font-weight: 600;
         margin-top: 5px;
         display: inline-block;
-    }
-    .kpi-delta-positive {
-        color: #059669;
-    }
-    .kpi-delta-neutral {
-        color: #2563EB;
-    }
+    }}
+    .kpi-delta-positive {{
+        color: #3CB234;
+    }}
+    .kpi-delta-neutral {{
+        color: {INK_FAINT};
+    }}
 
     /* 7. Tabs Responsive Scroll & Styling */
-    .stTabs [data-baseweb="tab-list"] {
+    .stTabs [data-baseweb="tab-list"] {{
         gap: 6px;
-        border-bottom: 2px solid #E2E8F0;
+        border-bottom: 2px solid {BORDER};
         padding-bottom: 2px;
         overflow-x: auto;
         white-space: nowrap;
         scrollbar-width: thin;
-    }
-    .stTabs [data-baseweb="tab"] {
+    }}
+    .stTabs [data-baseweb="tab"] {{
         padding: 10px 18px;
         font-weight: 600;
         font-size: 0.9rem;
         border-radius: 8px 8px 0 0;
-        color: #475569;
+        color: {INK_MUTED};
         transition: color 0.15s ease, background-color 0.15s ease;
-    }
-    .stTabs [aria-selected="true"] {
-        color: #1E40AF !important;
-        background-color: #EFF6FF !important;
-        border-bottom: 2px solid #2563EB !important;
-    }
+    }}
+    .stTabs [aria-selected="true"] {{
+        color: {BRAND_RED} !important;
+        background-color: #FCE9E6 !important;
+        border-bottom: 2px solid {BRAND_RED} !important;
+    }}
 
     /* 8. Math and Content Cards */
-    .content-box {
-        background: #FFFFFF;
-        border: 1px solid #E2E8F0;
+    .content-box {{
+        background: {SURFACE};
+        border: 1px solid {BORDER};
         border-radius: 10px;
         padding: 16px 20px;
         margin-bottom: 1rem;
-    }
-    .content-box-slate {
-        background: #F8FAFC;
-        border: 1px solid #E2E8F0;
+    }}
+    .content-box-slate {{
+        background: {SURFACE_MUTED};
+        border: 1px solid {BORDER};
         border-radius: 10px;
         padding: 14px 18px;
         margin-bottom: 0.85rem;
-    }
+    }}
 
     /* 9. Responsive DataTables */
-    .dataframe-container {
+    .dataframe-container {{
         overflow-x: auto;
         border-radius: 8px;
-        border: 1px solid #E2E8F0;
-    }
+        border: 1px solid {BORDER};
+    }}
 
-    /* 10. Hide default footer and excess Streamlit badges */
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    #MainMenu {visibility: hidden;}
+    /* 10. Hide default footer and excess Streamlit badges (custom footer added instead) */
+    footer {{visibility: hidden;}}
+    header {{visibility: hidden;}}
+    #MainMenu {{visibility: hidden;}}
+
+    /* 11. Custom go, pal! footer */
+    .gopal-footer {{
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid {BORDER};
+        font-size: 0.78rem;
+        color: {INK_FAINT};
+        text-align: center;
+    }}
+    .gopal-footer b {{
+        color: {INK_MUTED};
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -237,15 +291,14 @@ if "solution" not in st.session_state:
 sol = st.session_state.solution
 
 # ==========================================
-# EXECUTIVE HEADER & METADATA BADGES
+# HEADER & METADATA BADGES
 # ==========================================
 st.markdown(f"""
-<div class="main-header" style="display:flex; align-items:center; gap:0.6rem;">
-    <img src="data:image/jpeg;base64,{LOGO_B64}" style="height:2.4em; width:2.4em; border-radius:8px; object-fit:cover;" />
-    Optimal Allocation of Consulting Resources
-</div>
+<img src="data:image/png;base64,{LOGO_B64}" style="height:2.6em; border-radius:6px; margin-bottom:0.5rem;" />
+<div class="main-header">Team Capacity & Client Allocation Model</div>
+<div class="tagline">for companies that wanna go somewhere <em>fast</em></div>
 """, unsafe_allow_html=True)
-st.markdown('<div class="sub-header">Mixed-Integer Linear Programming (MILP) Decision Support System • Solved Exclusively with IBM ILOG CPLEX</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-header">How go, pal! allocates its own team across client engagements to maximize contribution margin — solved exclusively with IBM ILOG CPLEX.</div>', unsafe_allow_html=True)
 
 # Metadata Pills
 header_num_consultants = len(st.session_state.capacities_df)
@@ -254,10 +307,10 @@ header_num_clients = len(st.session_state.client_df)
 header_total_req = st.session_state.client_df["Required_Hours"].sum()
 st.markdown(f"""
 <div class="badge-container">
-    <span class="badge-pill badge-blue">⚡ Engine: IBM ILOG CPLEX Optimizer</span>
+    <span class="badge-pill badge-red">⚡ Engine: IBM ILOG CPLEX Optimizer</span>
     <span class="badge-pill badge-green">🎯 Status: Exact Global Optimal</span>
-    <span class="badge-pill badge-purple">👥 Resources: {header_num_consultants} Specialists ({header_total_cap:.0f}h Cap)</span>
-    <span class="badge-pill badge-slate">📋 Demand: {header_num_clients} Clients ({header_total_req:.0f}h Total)</span>
+    <span class="badge-pill badge-gold">👥 Team: {header_num_consultants} People ({header_total_cap:.0f}h Cap)</span>
+    <span class="badge-pill badge-slate">📋 Engagements: {header_num_clients} Clients ({header_total_req:.0f}h Total)</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -268,7 +321,7 @@ with st.container():
     act_col1, act_col2, act_col3, act_col4 = st.columns([1.5, 1.2, 1.2, 1.1])
     
     with act_col1:
-        solve_clicked = st.button("🚀 Solve Optimization Model", type="primary", use_container_width=True)
+        solve_clicked = st.button("🚀 Solve Allocation Model", type="primary", use_container_width=True)
     with act_col2:
         if sol.get("optimal", False):
             st.markdown(f"""
@@ -278,10 +331,10 @@ with st.container():
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:8px; padding:6px 12px; text-align:center;">
-                <div style="font-size:0.7rem; font-weight:700; color:#B91C1C; text-transform:uppercase;">Status</div>
-                <div style="font-size:1rem; font-weight:800; color:#991B1B;">Infeasible</div>
+            st.markdown(f"""
+            <div style="background:#FCE9E6; border:1px solid #F3B8AC; border-radius:8px; padding:6px 12px; text-align:center;">
+                <div style="font-size:0.7rem; font-weight:700; color:#A32B17; text-transform:uppercase;">Status</div>
+                <div style="font-size:1rem; font-weight:800; color:#8A2A1B;">Infeasible</div>
             </div>
             """, unsafe_allow_html=True)
     with act_col3:
@@ -292,24 +345,24 @@ with st.container():
                 if action_total_cap > 0 else 0.0
             )
             st.markdown(f"""
-            <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:6px 12px; text-align:center;">
-                <div style="font-size:0.7rem; font-weight:700; color:#1D4ED8; text-transform:uppercase;">Firm Load Utilized</div>
-                <div style="font-size:1.05rem; font-weight:800; color:#1E40AF;">{action_firm_load_pct:.1f}%</div>
+            <div style="background:{SURFACE_MUTED}; border:1px solid {BORDER}; border-radius:8px; padding:6px 12px; text-align:center;">
+                <div style="font-size:0.7rem; font-weight:700; color:{INK_FAINT}; text-transform:uppercase;">Team Load Utilized</div>
+                <div style="font-size:1.05rem; font-weight:800; color:{INK};">{action_firm_load_pct:.1f}%</div>
             </div>
             """, unsafe_allow_html=True)
         else:
-            st.markdown("""
-            <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:6px 12px; text-align:center;">
-                <div style="font-size:0.7rem; font-weight:700; color:#64748B; text-transform:uppercase;">Firm Load</div>
-                <div style="font-size:1rem; font-weight:800; color:#334155;">--</div>
+            st.markdown(f"""
+            <div style="background:{SURFACE_MUTED}; border:1px solid {BORDER}; border-radius:8px; padding:6px 12px; text-align:center;">
+                <div style="font-size:0.7rem; font-weight:700; color:{INK_FAINT}; text-transform:uppercase;">Team Load</div>
+                <div style="font-size:1rem; font-weight:800; color:{INK_MUTED};">--</div>
             </div>
             """, unsafe_allow_html=True)
     with act_col4:
         solve_time_ms = sol.get("solve_time", 0.0) * 1000
         st.markdown(f"""
-        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:6px 12px; text-align:center;">
-            <div style="font-size:0.7rem; font-weight:700; color:#64748B; text-transform:uppercase;">CPLEX Time</div>
-            <div style="font-size:1.05rem; font-weight:800; color:#334155;">{solve_time_ms:.1f} ms</div>
+        <div style="background:{SURFACE_MUTED}; border:1px solid {BORDER}; border-radius:8px; padding:6px 12px; text-align:center;">
+            <div style="font-size:0.7rem; font-weight:700; color:{INK_FAINT}; text-transform:uppercase;">CPLEX Time</div>
+            <div style="font-size:1.05rem; font-weight:800; color:{INK_MUTED};">{solve_time_ms:.1f} ms</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -348,7 +401,7 @@ with tab_math:
     with col_m1:
         st.markdown("""
         <div class="content-box">
-            <h4 style="color:#1E40AF; margin-top:0; font-size:1rem; font-weight:700;">1. Sets and Indices</h4>
+            <h4 style="color:#17171A; margin-top:0; font-size:1rem; font-weight:700;">1. Sets and Indices</h4>
         </div>
         """, unsafe_allow_html=True)
         st.latex(r"""
@@ -360,7 +413,7 @@ with tab_math:
 
         st.markdown("""
         <div class="content-box">
-            <h4 style="color:#1E40AF; margin-top:0; font-size:1rem; font-weight:700;">2. Decision Variables</h4>
+            <h4 style="color:#17171A; margin-top:0; font-size:1rem; font-weight:700;">2. Decision Variables</h4>
         </div>
         """, unsafe_allow_html=True)
         st.latex(r"""
@@ -374,7 +427,7 @@ with tab_math:
     with col_m2:
         st.markdown("""
         <div class="content-box">
-            <h4 style="color:#1E40AF; margin-top:0; font-size:1rem; font-weight:700;">3. Model Parameters</h4>
+            <h4 style="color:#17171A; margin-top:0; font-size:1rem; font-weight:700;">3. Model Parameters</h4>
         </div>
         """, unsafe_allow_html=True)
         st.latex(r"""
@@ -389,9 +442,9 @@ with tab_math:
         """)
 
         st.markdown("""
-        <div class="content-box" style="border-left: 4px solid #2563EB;">
-            <h4 style="color:#1E40AF; margin-top:0; font-size:1rem; font-weight:700;">4. Objective Function</h4>
-            <div style="font-size:0.85rem; color:#475569;">Maximize total firm weekly contribution margin across all consultants and clients:</div>
+        <div class="content-box" style="border-left: 4px solid #E03720;">
+            <h4 style="color:#17171A; margin-top:0; font-size:1rem; font-weight:700;">4. Objective Function</h4>
+            <div style="font-size:0.85rem; color:#5C5A57;">Maximize total firm weekly contribution margin across all consultants and clients:</div>
         </div>
         """, unsafe_allow_html=True)
         st.latex(r"""
@@ -400,7 +453,7 @@ with tab_math:
 
     st.markdown("""
     <div class="content-box">
-        <h4 style="color:#1E40AF; margin-top:0; font-size:1rem; font-weight:700;">5. Constraint System (8 Rigorous Rule Sets)</h4>
+        <h4 style="color:#17171A; margin-top:0; font-size:1rem; font-weight:700;">5. Constraint System (8 Rigorous Rule Sets)</h4>
     </div>
     """, unsafe_allow_html=True)
     
@@ -419,8 +472,8 @@ with tab_math:
 
     st.markdown("""
     <div class="content-box-slate">
-        <div style="font-size:0.85rem; font-weight:700; color:#1E40AF; text-transform:uppercase; letter-spacing:0.04em;">⚡ Optimization Technology & Solver Specifications</div>
-        <div style="font-size:0.9rem; color:#334155; margin-top:4px;">
+        <div style="font-size:0.85rem; font-weight:700; color:#17171A; text-transform:uppercase; letter-spacing:0.04em;">⚡ Optimization Technology & Solver Specifications</div>
+        <div style="font-size:0.9rem; color:#5C5A57; margin-top:4px;">
             The model is solved strictly using the <b>IBM ILOG CPLEX Optimizer</b> via the official Python DOcplex Mathematical Programming API (<code>docplex.mp.model.Model</code>). CPLEX employs advanced Branch-and-Cut, cutting plane generation, dynamic search, and presolve heuristics to guarantee exact global optimality in milliseconds.
         </div>
     </div>
@@ -457,21 +510,21 @@ with tab_params:
 
     st.markdown(f"""
     <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
-        <div style="flex:1; min-width:140px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px;">
-            <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Total Client Demand</div>
-            <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">{tot_req:.0f} hrs</div>
+        <div style="flex:1; min-width:140px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 12px;">
+            <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Total Client Demand</div>
+            <div style="font-size:1.15rem; font-weight:800; color:#17171A;">{tot_req:.0f} hrs</div>
         </div>
-        <div style="flex:1; min-width:140px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px;">
-            <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Total Firm Capacity</div>
-            <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">{tot_cap:.0f} hrs</div>
+        <div style="flex:1; min-width:140px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 12px;">
+            <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Total Firm Capacity</div>
+            <div style="font-size:1.15rem; font-weight:800; color:#17171A;">{tot_cap:.0f} hrs</div>
         </div>
-        <div style="flex:1; min-width:140px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px;">
-            <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Firm Capacity Buffer</div>
-            <div style="font-size:1.15rem; font-weight:800; color:#059669;">+{slack_diff:.0f} hrs ({slack_diff_pct:.1f}%)</div>
+        <div style="flex:1; min-width:140px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 12px;">
+            <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Firm Capacity Buffer</div>
+            <div style="font-size:1.15rem; font-weight:800; color:#3CB234;">+{slack_diff:.0f} hrs ({slack_diff_pct:.1f}%)</div>
         </div>
-        <div style="flex:1; min-width:140px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 12px;">
-            <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Active Accounts</div>
-            <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">{len(st.session_state.client_df)} Clients</div>
+        <div style="flex:1; min-width:140px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 12px;">
+            <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Active Accounts</div>
+            <div style="font-size:1.15rem; font-weight:800; color:#17171A;">{len(st.session_state.client_df)} Clients</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -480,14 +533,16 @@ with tab_params:
         "Client Requirements (Appendix A)",
         "Billing Rates (Appendix B)",
         "Delivery Costs (Appendix C)",
-        "Consultant Capacities"
+        "Team Capacities"
     ])
-    
+
     with p_tab1:
         st.markdown("**Client Requirements, Priority & Minimum Hours Constraints**")
+        st.caption("🔒 Axestrack carries a hard exclusivity lock on Parva Yadav's (M) full capacity — see the Locked column below.")
         client_col_config = {
             "Client": st.column_config.TextColumn(label="Client (j)", disabled=True),
             "Priority": st.column_config.SelectboxColumn(label="Priority", options=["Strategic", "Important", "Standard"]),
+            "Locked_Consultant": st.column_config.TextColumn(label="🔒 Locked To", disabled=True, help="Consultant whose entire capacity this client exclusively holds, if any."),
             "Required_Hours": st.column_config.NumberColumn(label="Required (Hⱼ)", min_value=1.0, step=1.0, format="%.0f hrs"),
             "M_Min": st.column_config.NumberColumn(label="Mₘᵢₙ (S_{M,j})", min_value=0.0, step=1.0, format="%.0f hrs"),
             "A_Min": st.column_config.NumberColumn(label="Aₘᵢₙ (S_{A,j})", min_value=0.0, step=1.0, format="%.0f hrs"),
@@ -503,13 +558,13 @@ with tab_params:
             key="client_editor"
         )
         st.session_state.client_df = edited_clients
-        
+
         c_req = edited_clients["Required_Hours"].sum()
         m_tot = edited_clients["M_Min"].sum()
         a_tot = edited_clients["A_Min"].sum()
         t_tot = edited_clients["T_Min"].sum()
         ai_tot = edited_clients["AI_Min"].sum()
-        
+
         st.info(f"📊 **Current Totals:** Total Required Demand (Hⱼ) = **{c_req:.0f} hrs** | Mₘᵢₙ = **{m_tot:.0f}** | Aₘᵢₙ = **{a_tot:.0f}** | Tₘᵢₙ = **{t_tot:.0f}** | AIₘᵢₙ = **{ai_tot:.0f}**")
 
     with p_tab2:
@@ -547,10 +602,14 @@ with tab_params:
         st.session_state.costs_df = edited_costs
 
     with p_tab4:
-        st.markdown("**Consultant Weekly Available Capacities (hours/week)**")
+        st.markdown("**Team Weekly Available Capacities (hours/week)**")
+        st.caption(
+            "Parva Yadav — CEO & Managing Director · Abhimanyu Vyas — Strategy & Performance Media · "
+            "Vinayak Vishvakarma — Whole-time Director, Tech & Engineering · Puneet Agarwal — Engagement Lead, Research & AI"
+        )
         caps_col_config = {
-            "Consultant": st.column_config.TextColumn(label="Consultant (i)", disabled=True),
-            "Role": st.column_config.TextColumn(label="Role Specification", disabled=True),
+            "Consultant": st.column_config.TextColumn(label="Key (i)", disabled=True),
+            "Role": st.column_config.TextColumn(label="Team Member", disabled=True),
             "Capacity_Hours": st.column_config.NumberColumn(label="Capacity (Capᵢ)", min_value=0.0, step=1.0, format="%.1f hrs"),
         }
         edited_caps = st.data_editor(
@@ -577,7 +636,7 @@ with tab_charts:
         row1_col1, row1_col2 = st.columns(2)
         
         with row1_col1:
-            st.markdown("##### 1. Consultant Work Allocation per Client (Hours)")
+            st.markdown("##### 1. Team Allocation per Client (Hours)")
             alloc_raw = sol["allocation_df"]
             
             chart_data = []
@@ -602,10 +661,10 @@ with tab_charts:
                 color="Consultant",
                 text="Hours_Label" if not cdf.empty else None,
                 color_discrete_map={
-                    model_data.CONSULTANT_NAMES["M"]: "#2563EB",
-                    model_data.CONSULTANT_NAMES["A"]: "#059669",
-                    model_data.CONSULTANT_NAMES["T"]: "#D97706",
-                    model_data.CONSULTANT_NAMES["AI"]: "#7C3AED"
+                    model_data.CONSULTANT_NAMES["M"]: CONSULTANT_COLORS["M"],
+                    model_data.CONSULTANT_NAMES["A"]: CONSULTANT_COLORS["A"],
+                    model_data.CONSULTANT_NAMES["T"]: CONSULTANT_COLORS["T"],
+                    model_data.CONSULTANT_NAMES["AI"]: CONSULTANT_COLORS["AI"]
                 },
                 barmode="stack",
                 template="plotly_white"
@@ -626,7 +685,7 @@ with tab_charts:
             st.plotly_chart(fig_alloc, use_container_width=True)
 
         with row1_col2:
-            st.markdown("##### 2. Consultant Capacity Utilization vs Slack")
+            st.markdown("##### 2. Team Capacity Utilization vs Slack")
             udf = sol["utilization_df"]
             
             fig_util = go.Figure()
@@ -634,7 +693,7 @@ with tab_charts:
                 name="Allocated Hours",
                 x=udf["Consultant"],
                 y=udf["Allocated_Hours"],
-                marker_color="#2563EB",
+                marker_color=BRAND_RED,
                 text=udf["Allocated_Hours"].map(lambda x: f"{x:.1f}h"),
                 textposition="inside"
             ))
@@ -642,7 +701,7 @@ with tab_charts:
                 name="Unallocated Slack Hours",
                 x=udf["Consultant"],
                 y=udf["Slack_Hours"],
-                marker_color="#E2E8F0",
+                marker_color=BORDER,
                 text=udf["Slack_Hours"].map(lambda x: f"{x:.1f}h" if x > 0 else ""),
                 textposition="inside"
             ))
@@ -672,7 +731,7 @@ with tab_charts:
                 y="Client",
                 orientation="h",
                 color="Priority",
-                color_discrete_map={"Strategic": "#4F46E5", "Important": "#0284C7", "Standard": "#64748B"},
+                color_discrete_map=PRIORITY_COLORS,
                 text="Client_Margin",
                 template="plotly_white"
             )
@@ -700,10 +759,10 @@ with tab_charts:
                 hole=0.48,
                 color="Role",
                 color_discrete_map={
-                    model_data.CONSULTANT_NAMES["M"]: "#2563EB",
-                    model_data.CONSULTANT_NAMES["A"]: "#059669",
-                    model_data.CONSULTANT_NAMES["T"]: "#D97706",
-                    model_data.CONSULTANT_NAMES["AI"]: "#7C3AED"
+                    model_data.CONSULTANT_NAMES["M"]: CONSULTANT_COLORS["M"],
+                    model_data.CONSULTANT_NAMES["A"]: CONSULTANT_COLORS["A"],
+                    model_data.CONSULTANT_NAMES["T"]: CONSULTANT_COLORS["T"],
+                    model_data.CONSULTANT_NAMES["AI"]: CONSULTANT_COLORS["AI"]
                 },
                 template="plotly_white"
             )
@@ -736,21 +795,21 @@ with tab_charts:
         # Stat cards for 3D view
         st.markdown(f"""
         <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
-            <div style="flex:1; min-width:160px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 14px;">
-                <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Global Optimal Objective (Z*)</div>
-                <div style="font-size:1.15rem; font-weight:800; color:#1E40AF;">${sol['objective_value']:,.2f}</div>
+            <div style="flex:1; min-width:160px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 14px;">
+                <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Global Optimal Objective (Z*)</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#17171A;">${sol['objective_value']:,.2f}</div>
             </div>
-            <div style="flex:1; min-width:160px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 14px;">
-                <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Highest Margin Client</div>
-                <div style="font-size:1.15rem; font-weight:800; color:#059669;">{best_client['Client']} (${best_client['Client_Margin']:,.0f})</div>
+            <div style="flex:1; min-width:160px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 14px;">
+                <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Highest Margin Client</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#3CB234;">{best_client['Client']} (${best_client['Client_Margin']:,.0f})</div>
             </div>
-            <div style="flex:1; min-width:160px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 14px;">
-                <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">Total Hours Allocated</div>
-                <div style="font-size:1.15rem; font-weight:800; color:#0F172A;">{x_vals.sum():.0f} hrs across {len(adf)} Clients</div>
+            <div style="flex:1; min-width:160px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 14px;">
+                <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">Total Hours Allocated</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#17171A;">{x_vals.sum():.0f} hrs across {len(adf)} Clients</div>
             </div>
-            <div style="flex:1; min-width:160px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:8px 14px;">
-                <div style="font-size:0.7rem; color:#64748B; font-weight:700; text-transform:uppercase;">3D Value Plane Model</div>
-                <div style="font-size:1.15rem; font-weight:800; color:#6366F1;">Fitted Solution Frontier</div>
+            <div style="flex:1; min-width:160px; background:#F5F4F2; border:1px solid #E4E1DE; border-radius:8px; padding:8px 14px;">
+                <div style="font-size:0.7rem; color:#8A8783; font-weight:700; text-transform:uppercase;">3D Value Plane Model</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#17171A;">Fitted Solution Frontier</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -771,7 +830,7 @@ with tab_charts:
             x=x_surf,
             y=y_surf,
             z=Z_grid,
-            colorscale=[[0, "rgba(219, 234, 254, 0.35)"], [1, "rgba(191, 219, 254, 0.45)"]],
+            colorscale=[[0, "rgba(224, 55, 32, 0.08)"], [1, "rgba(224, 55, 32, 0.16)"]],
             showscale=False,
             name="Fitted Solution Frontier",
             hoverinfo="skip"
@@ -787,7 +846,7 @@ with tab_charts:
                 y=[yi, yi],
                 z=[0, zi],
                 mode="lines",
-                line=dict(color="#CBD5E1", width=2, dash="dot"),
+                line=dict(color="#C9C6C2", width=2, dash="dot"),
                 showlegend=False,
                 hoverinfo="skip"
             ))
@@ -813,15 +872,15 @@ with tab_charts:
             mode="markers+text",
             text=adf["Client"].values,
             textposition="top center",
-            textfont=dict(size=11, color="#0F172A", family="-apple-system, sans-serif"),
+            textfont=dict(size=11, color="#17171A", family="-apple-system, sans-serif"),
             hovertext=hover_texts,
             hoverinfo="text",
             marker=dict(
                 size=8,
                 color=z_vals,
-                colorscale="Viridis",
+                colorscale=[[0, "#FBEAE6"], [0.5, "#E8654E"], [1, "#7A1204"]],
                 colorbar=dict(
-                    title=dict(text="Optimal Margin ($)", font=dict(size=11, color="#334155")),
+                    title=dict(text="Optimal Margin ($)", font=dict(size=11, color="#5C5A57")),
                     thickness=14,
                     len=0.75,
                     x=1.02
@@ -840,13 +899,13 @@ with tab_charts:
             mode="markers+text",
             text=[f"⭐ Peak: {best_client['Client']}"],
             textposition="bottom center",
-            textfont=dict(size=12, color="#B45309", family="-apple-system, sans-serif"),
+            textfont=dict(size=12, color="#7A5C08", family="-apple-system, sans-serif"),
             hoverinfo="skip",
             marker=dict(
                 size=12,
-                color="#F59E0B",
+                color="#B8860B",
                 symbol="diamond",
-                line=dict(color="#78350F", width=2)
+                line=dict(color="#17171A", width=2)
             ),
             name="Max Margin Engagement"
         ))
@@ -854,7 +913,7 @@ with tab_charts:
         fig_3d.update_layout(
             title=dict(
                 text="<b>3D Optimal Solution Space: Client Coordinates on the Contribution Frontier</b>",
-                font=dict(size=13, color="#1E40AF")
+                font=dict(size=13, color="#17171A")
             ),
             height=540,
             margin=dict(l=10, r=10, t=40, b=10),
@@ -862,19 +921,19 @@ with tab_charts:
                 xaxis=dict(
                     title="Engagement Hours (Hⱼ)",
                     backgroundcolor="rgba(248, 250, 252, 0.6)",
-                    gridcolor="#E2E8F0",
+                    gridcolor="#E4E1DE",
                     showbackground=True
                 ),
                 yaxis=dict(
                     title="Delivery Cost (Cⱼ)",
                     backgroundcolor="rgba(248, 250, 252, 0.6)",
-                    gridcolor="#E2E8F0",
+                    gridcolor="#E4E1DE",
                     showbackground=True
                 ),
                 zaxis=dict(
                     title="Contribution Margin (Zⱼ)",
                     backgroundcolor="rgba(248, 250, 252, 0.6)",
-                    gridcolor="#E2E8F0",
+                    gridcolor="#E4E1DE",
                     showbackground=True
                 ),
                 camera=dict(eye=dict(x=1.65, y=-1.65, z=1.15))
@@ -894,7 +953,7 @@ with tab_results:
         st.error(f"⚠️ Optimization Status: {sol.get('status', 'Infeasible')}")
         for err in sol.get("errors", []):
             st.warning(err)
-        st.info("💡 Suggestion: Check if total consultant capacities are at least equal to total client required hours, or if specific expertise minimums exceed available hours.")
+        st.info("💡 Suggestion: Check if total team capacities are at least equal to total client required hours, or if specific expertise minimums exceed available hours. If a client holds an exclusivity lock (see 🔒 notes above), remember the remaining clients must be served entirely from the other three team members' capacity.")
     else:
         # Top KPI Metric Grid (Responsive CSS Grid)
         total_req = st.session_state.client_df["Required_Hours"].sum()
@@ -916,16 +975,16 @@ with tab_results:
             <div class="kpi-card">
                 <div class="kpi-label">Total Delivery Cost</div>
                 <div class="kpi-value">${sol['total_cost']:,.2f}</div>
-                <div class="kpi-delta kpi-delta-neutral">Specialist Delivery Cost</div>
+                <div class="kpi-delta kpi-delta-neutral">Team Delivery Cost</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">Capacity Utilized</div>
-                <div class="kpi-value">{total_req:.0f} / {total_cap:.0f} <span style="font-size:1rem; font-weight:600; color:#64748B;">hrs</span></div>
+                <div class="kpi-value">{total_req:.0f} / {total_cap:.0f} <span style="font-size:1rem; font-weight:600; color:#8A8783;">hrs</span></div>
                 <div class="kpi-delta kpi-delta-positive">{firm_load_pct:.1f}% Firm Load</div>
             </div>
             <div class="kpi-card">
                 <div class="kpi-label">CPLEX Runtime</div>
-                <div class="kpi-value">{sol['solve_time']*1000:.1f} <span style="font-size:1rem; font-weight:600; color:#64748B;">ms</span></div>
+                <div class="kpi-value">{sol['solve_time']*1000:.1f} <span style="font-size:1rem; font-weight:600; color:#8A8783;">ms</span></div>
                 <div class="kpi-delta kpi-delta-positive">Integer Optimal (B&C)</div>
             </div>
         </div>
@@ -949,6 +1008,7 @@ with tab_results:
         
         # Subscript RHS of variables with underscore in column headers
         alloc_col_renames = {
+            "Locked_Consultant": "🔒 Locked To",
             "Req_Hours": "Required (Hⱼ)",
             "PM_Assigned": "Designated PM (pᵢⱼ)",
             "PM_Min_Req": "PM Min (PMⱼ)",
@@ -965,9 +1025,9 @@ with tab_results:
         
         st.dataframe(display_df, use_container_width=True, hide_index=True)
         
-        # Consultant Utilization Summary
+        # Team Utilization Summary
         st.markdown("<div style='margin-top: 1.25rem;'></div>", unsafe_allow_html=True)
-        st.subheader("👥 Consultant Utilization, Slack & Margin Contribution")
+        st.subheader("👥 Team Utilization, Slack & Margin Contribution")
         
         util_df = sol["utilization_df"].copy()
         display_util = util_df.copy()
@@ -995,9 +1055,19 @@ with tab_results:
         st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
         csv_data = alloc_df.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="📥 Export Optimal Allocation Results (CSV)",
+            label="📥 Export Allocation Results (CSV)",
             data=csv_data,
-            file_name="optimal_consulting_allocation.csv",
+            file_name="gopal_team_allocation.csv",
             mime="text/csv",
             use_container_width=True
         )
+
+# ==========================================
+# FOOTER
+# ==========================================
+st.markdown(f"""
+<div class="gopal-footer">
+    <img src="data:image/png;base64,{LOGO_B64}" style="height:1.4em; vertical-align:middle; border-radius:4px; margin-right:6px;" />
+    <b>go, pal!</b> — Team Capacity Model · A tool by <b>Here We Go Pal Private Limited</b>
+</div>
+""", unsafe_allow_html=True)

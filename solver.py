@@ -1,6 +1,6 @@
 """
 Mathematical Optimization Solver Engine
-Solves the Mixed-Integer Linear Programming (MILP) Model for Consulting Resource Allocation.
+Solves the MILP model for go, pal!'s own team capacity and client allocation.
 Exclusively uses IBM ILOG CPLEX Optimizer (DOcplex Python API).
 """
 
@@ -8,6 +8,26 @@ import time
 from typing import Dict, Any, Tuple, List
 import pandas as pd
 import docplex.mp.model as cpx_model
+
+def get_lock_notes(client_df: pd.DataFrame) -> List[str]:
+    """
+    Surfaces any exclusivity lock (Locked_Consultant) present in the client data —
+    e.g. Axestrack's hold on the full M capacity — so infeasibility reads as a
+    binding real-world clause rather than a generic solver error.
+    """
+    notes = []
+    if "Locked_Consultant" not in client_df.columns:
+        return notes
+    for _, row in client_df.iterrows():
+        lock = row.get("Locked_Consultant", "")
+        if isinstance(lock, str) and lock.strip():
+            notes.append(
+                f"🔒 Exclusivity clause: {row['Client']} holds consultant {lock.strip()}'s "
+                f"entire capacity. That capacity is fully committed and unavailable to any "
+                f"other client — this is a binding constraint, not a bug."
+            )
+    return notes
+
 
 def validate_parameters(
     client_df: pd.DataFrame,
@@ -18,7 +38,7 @@ def validate_parameters(
     Returns (is_valid, list_of_warning_or_error_messages).
     """
     issues = []
-    
+
     total_required = client_df["Required_Hours"].sum()
     total_capacity = capacities_df["Capacity_Hours"].sum()
     
@@ -54,6 +74,8 @@ def validate_parameters(
             )
             
     is_valid = len([msg for msg in issues if msg.startswith("❌")]) == 0
+    if not is_valid:
+        issues = get_lock_notes(client_df) + issues
     return is_valid, issues
 
 
@@ -65,7 +87,7 @@ def solve_consulting_allocation(
     solver_name: str = "IBM ILOG CPLEX"
 ) -> Dict[str, Any]:
     """
-    Formulates and solves the consulting resource allocation optimization problem
+    Formulates and solves the team capacity allocation optimization problem
     strictly using IBM ILOG CPLEX Optimizer via docplex.
     """
     start_time = time.time()
@@ -203,11 +225,19 @@ def solve_consulting_allocation(
     
     if sol is None:
         cplex_status = mdl.solve_details.status if mdl.solve_details else "Infeasible or Unbounded"
+        lock_notes = get_lock_notes(client_df)
+        errors = lock_notes + [f"IBM CPLEX concluded with status: {cplex_status}. Check capacity and constraint settings."]
+        if lock_notes:
+            errors.append(
+                "💡 With a consultant fully locked to one client, every remaining client's "
+                "demand has to be met from the other three consultants' capacity alone. "
+                "Reduce demand, adjust expertise minimums, or free up the lock to restore feasibility."
+            )
         return {
             "status": f"CPLEX: {cplex_status}",
             "optimal": False,
             "objective_value": 0.0,
-            "errors": [f"IBM CPLEX concluded with status: {cplex_status}. Check capacity and constraint settings."],
+            "errors": errors,
             "solve_time": solve_duration,
             "solver_used": "IBM ILOG CPLEX Optimizer"
         }
@@ -234,11 +264,18 @@ def solve_consulting_allocation(
                 pm_assignments[j] = i
                 
     # Build detailed allocation DataFrame
+    locked_col = client_df["Locked_Consultant"] if "Locked_Consultant" in client_df.columns else None
+
     alloc_rows = []
     for j in clients:
+        locked_val = ""
+        if locked_col is not None:
+            matches = client_df.loc[client_df["Client"] == j, "Locked_Consultant"].values
+            locked_val = matches[0] if len(matches) else ""
         row = {
             "Client": j,
             "Priority": client_df.loc[client_df["Client"] == j, "Priority"].values[0],
+            "Locked_Consultant": locked_val if isinstance(locked_val, str) else "",
             "Req_Hours": req_hours[j],
             "PM_Assigned": pm_assignments.get(j, "N/A"),
             "PM_Min_Req": pm_min[j],

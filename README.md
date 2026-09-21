@@ -1,18 +1,19 @@
-# Consulting Resource Optimization & PM Allocation System
+# go, pal! — Team Capacity Model
 
-A production-ready decision support application built **strictly in Python** with an interactive **Streamlit** GUI, solving the Mixed-Integer Linear Programming (MILP) model for allocating specialist consultants across client engagements.
+*for companies that wanna go somewhere fast*
+
+How go, pal! allocates its own team — Parva, Abhimanyu, Vinayak, and Puneet — across client engagements to maximize contribution margin. Built strictly in Python with an interactive Streamlit GUI, solved with a Mixed-Integer Linear Programming (MILP) model via IBM ILOG CPLEX.
 
 ---
 
-## 🎯 Course Project Alignment & Rubric Coverage
+## What's in here
 
-This software satisfies all requirements outlined in the course final project specification:
-1. **Mathematical Formulation**: Complete MILP model with decision variables for allocation hours ($x_{ij}$), binary team assignment indicators ($y_{ij}$), and binary Principal PM designations ($p_{ij}$), complete with 8 constraint sets.
-2. **Interactive GUI in Streamlit**:
-   - Allows users to enter/edit all parameters (Client requirements, Billing rates, Delivery costs, Consultant capacities).
-   - Solves the model when users click **"Solve Optimization Model"**.
-   - Displays clear results in dedicated tabs (summary KPI metrics, client allocation matrix, consultant slack/utilization, and interactive Plotly visualization charts).
-3. **Mandatory Abstract Submission**: Includes an executive ~400-word submission-ready abstract covering context, objectives, key assumptions, parameters, modeling approach, solver, and GUI plan.
+1. **Mathematical Formulation**: A complete MILP model with decision variables for allocation hours ($x_{ij}$), binary team assignment indicators ($y_{ij}$), and binary Principal PM designations ($p_{ij}$), across 8 constraint sets.
+2. **Interactive Streamlit GUI**:
+   - Edit every parameter live — client demand, expertise minimums, billing rates, delivery costs, team capacities.
+   - Solve the model with **"Solve Allocation Model"**.
+   - Read results in dedicated tabs: KPI summary, client allocation matrix, team slack/utilization, and interactive Plotly charts.
+3. **Executive Abstract**: A concise write-up covering context, objectives, key assumptions, parameters, modeling approach, solver choice, and GUI plan.
 
 ---
 
@@ -34,9 +35,10 @@ The application will launch automatically in your browser (typically at `http://
 ## 📁 Repository Structure
 
 ```
-├── app.py              # Main Streamlit GUI with 5 interactive tabs and KPI dashboards
+├── app.py              # Main Streamlit GUI with 4 interactive tabs and KPI dashboards
 ├── solver.py           # MILP optimization engine (Exclusively IBM ILOG CPLEX via docplex)
-├── model_data.py       # Default benchmark parameters (Appendix A, B, C) and data structures
+├── model_data.py       # Default team, client, and rate data (Appendix A, B, C)
+├── assets/             # go, pal! logo (gopal-logo.png)
 ├── requirements.txt    # Python package dependencies (Streamlit, CPLEX, DOcplex, Pandas, Plotly)
 └── README.md           # Project documentation and mathematical formulation
 ```
@@ -45,7 +47,7 @@ The application will launch automatically in your browser (typically at `http://
 
 ## 📐 Mathematical Formulation Summary
 
-- **Sets**: $i \in \{M, A, T, AI\}$ (Consultants); $j \in \{C1, \dots, C12\}$ (Clients).
+- **Sets**: $i \in \{M, A, T, AI\}$ (Consultants); $j \in \{1, 2, \dots, 12\}$ (Clients).
 - **Decision Variables**:
   - $x_{ij} \ge 0$: Hours consultant $i$ allocates to client $j$.
   - $y_{ij} \in \{0, 1\}$: Binary indicator if consultant $i$ is assigned to client $j$.
@@ -64,20 +66,35 @@ The application will launch automatically in your browser (typically at `http://
 
 ---
 
+## 👥 The Team
+
+| Key | Name | Role |
+|---|---|---|
+| M | Parva Yadav | CEO & Managing Director — Marketing Technology |
+| A | Abhimanyu Vyas | Strategy & Performance Media — Advertising |
+| T | Vinayak Vishvakarma | Whole-time Director, Tech & Engineering — Technology |
+| AI | Puneet Agarwal | Engagement Lead, Research & AI — Artificial Intelligence |
+
+## 🔒 Axestrack's Exclusivity Clause
+
+Axestrack holds a hard lock on Parva's (M's) entire 40h weekly capacity — modeled as a minimum-hours constraint ($S_{M,\text{Axestrack}} = \text{Cap}_M$) rather than a bespoke constraint type. That forces $x_{M,\text{Axestrack}} = \text{Cap}_M$ exactly, leaving zero M-hours for any other client. Every other client's demand has to be satisfiable from Advertising, Technology, and AI capacity alone — by default, it is; push the numbers further and the model will correctly report infeasible, flagged clearly as the exclusivity clause binding rather than a generic solver error.
+
+---
+
 ## 📊 Benchmark Optimal Results
 
-For the baseline problem parameters:
-- **Optimal Contribution Margin**: **$559,000.00**
-- **Total Firm Revenue**: **$1,035,900.00**
-- **Total Delivery Cost**: **$476,900.00**
-- **Profit Margin**: **53.96%**
+For the baseline problem parameters (12 clients, including Axestrack's lock on Parva/M):
+- **Optimal Contribution Margin**: **$579,650.00**
+- **Total Firm Revenue**: **$1,054,000.00**
+- **Total Delivery Cost**: **$474,350.00**
+- **Profit Margin**: **55.0%**
 - **Capacity Utilization**:
-  - Marketing Tech (M): 30.0 / 40.0 hours (10 hours slack)
-  - Advertising (A): 40.0 / 40.0 hours (100% utilized)
-  - Technology (T): 40.0 / 40.0 hours (100% utilized)
-  - Artificial Intelligence (AI): 40.0 / 40.0 hours (100% utilized)
+  - Parva Yadav (M): 40.0 / 40.0 hours (0 hours slack — fully committed to Axestrack)
+  - Abhimanyu Vyas (A): 38.0 / 40.0 hours (2 hours slack)
+  - Vinayak Vishvakarma (T): 40.0 / 40.0 hours (100% utilized)
+  - Puneet Agarwal (AI): 40.0 / 40.0 hours (100% utilized)
 - **Principal PM Distribution**:
-  - Marketing Tech (M): 1 project (C9)
-  - Advertising (A): 5 projects (C2, C4, C6, C8, C10)
-  - Technology (T): 3 projects (C1, C3, C5)
-  - Artificial Intelligence (AI): 3 projects (C7, C11, C12)
+  - Parva Yadav (M): 1 project (Axestrack)
+  - Abhimanyu Vyas (A): 5 projects (HDFC, IOB, FnP, Nykaa, Masaba)
+  - Vinayak Vishvakarma (T): 4 projects (Disney, Kotak, Wildcraft, Coca-Cola)
+  - Puneet Agarwal (AI): 2 projects (KFC, Woodland)
