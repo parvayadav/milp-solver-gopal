@@ -4,6 +4,9 @@ Interactive Streamlit Application for Mixed-Integer Linear Programming (MILP) De
 Strictly in Python with Streamlit frontend. Solved exclusively with IBM ILOG CPLEX.
 """
 
+import base64
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -12,10 +15,13 @@ import plotly.graph_objects as go
 import model_data
 import solver
 
+LOGO_PATH = Path(__file__).parent / "assets" / "logo.jpg"
+LOGO_B64 = base64.b64encode(LOGO_PATH.read_bytes()).decode()
+
 # Page Configuration
 st.set_page_config(
     page_title="Consulting Resource Optimization | MILP Decision Support",
-    page_icon="💼",
+    page_icon=str(LOGO_PATH),
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -233,7 +239,12 @@ sol = st.session_state.solution
 # ==========================================
 # EXECUTIVE HEADER & METADATA BADGES
 # ==========================================
-st.markdown('<div class="main-header">💼 Optimal Allocation of Consulting Resources</div>', unsafe_allow_html=True)
+st.markdown(f"""
+<div class="main-header" style="display:flex; align-items:center; gap:0.6rem;">
+    <img src="data:image/jpeg;base64,{LOGO_B64}" style="height:2.4em; width:2.4em; border-radius:8px; object-fit:cover;" />
+    Optimal Allocation of Consulting Resources
+</div>
+""", unsafe_allow_html=True)
 st.markdown('<div class="sub-header">Mixed-Integer Linear Programming (MILP) Decision Support System • Solved Exclusively with IBM ILOG CPLEX</div>', unsafe_allow_html=True)
 
 # Metadata Pills
