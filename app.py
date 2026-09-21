@@ -61,6 +61,22 @@ st.markdown(f"""
         font-family: 'Libre Franklin', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
 
+    /* 0. Force light mode regardless of the visitor's OS/browser preference —
+       belt-and-suspenders alongside .streamlit/config.toml's [theme] base="light" */
+    html, body,
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stHeader"],
+    [data-testid="stMain"],
+    [data-testid="stBottomBlockContainer"] {{
+        background-color: {SURFACE} !important;
+        color: {INK} !important;
+        color-scheme: light !important;
+    }}
+    p, span, label, li {{
+        color: {INK} !important;
+    }}
+
     /* 1. Completely hide Streamlit sidebar and collapse control */
     [data-testid="stSidebar"], [data-testid="collapsedControl"], section[data-testid="stSidebar"] {{
         display: none !important;
@@ -68,10 +84,10 @@ st.markdown(f"""
 
     /* 2. Responsive Main Layout Padding */
     .block-container {{
-        padding-top: 1.5rem !important;
-        padding-bottom: 2.5rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        padding-top: 2rem !important;
+        padding-bottom: 3rem !important;
+        padding-left: 2.25rem !important;
+        padding-right: 2.25rem !important;
         max-width: 1400px;
     }}
     @media (max-width: 768px) {{
@@ -83,44 +99,52 @@ st.markdown(f"""
     }}
 
     /* 3. Typography — Newsreader for display, Libre Franklin for body/UI */
+    .gopal-logo {{
+        height: 2.4em;
+        border-radius: 6px;
+        margin-bottom: 1rem;
+        display: block;
+    }}
     .main-header {{
         font-family: 'Newsreader', Georgia, serif;
-        font-size: calc(1.5rem + 0.8vw);
+        font-size: calc(1.6rem + 0.9vw);
         font-weight: 700;
-        color: {INK};
+        color: {INK} !important;
         letter-spacing: -0.01em;
-        line-height: 1.2;
-        margin-bottom: 0.35rem;
-    }}
-    .sub-header {{
-        font-size: 0.95rem;
-        color: {INK_MUTED};
-        font-weight: 400;
-        line-height: 1.5;
-        margin-bottom: 1rem;
+        line-height: 1.3;
+        margin-bottom: 0.5rem;
     }}
     .tagline {{
         font-family: 'Newsreader', Georgia, serif;
-        font-size: 1.05rem;
-        color: {BRAND_RED};
+        font-size: 1.1rem;
+        color: {BRAND_RED} !important;
         font-weight: 500;
-        margin-bottom: 0.15rem;
+        line-height: 1.5;
+        margin-bottom: 0.6rem;
+    }}
+    .sub-header {{
+        font-size: 0.95rem;
+        color: {INK_MUTED} !important;
+        font-weight: 400;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        max-width: 62ch;
     }}
 
     /* 4. Metadata Badge Pills */
     .badge-container {{
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 1rem;
+        gap: 10px;
+        margin-bottom: 1.5rem;
     }}
     .badge-pill {{
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 4px 12px;
+        padding: 6px 14px;
         border-radius: 9999px;
-        font-size: 0.75rem;
+        font-size: 0.78rem;
         font-weight: 600;
         letter-spacing: 0.02em;
         white-space: nowrap;
@@ -159,15 +183,15 @@ st.markdown(f"""
     /* 6. Executive KPI Metric Cards */
     .kpi-grid {{
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 12px;
-        margin-bottom: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 14px;
+        margin-bottom: 1.75rem;
     }}
     .kpi-card {{
         background-color: {SURFACE};
         border: 1px solid {BORDER};
         border-radius: 12px;
-        padding: 14px 16px;
+        padding: 16px 18px;
         text-align: left;
         box-shadow: 0 1px 2px rgba(23, 23, 26, 0.04);
         transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -215,17 +239,24 @@ st.markdown(f"""
         scrollbar-width: thin;
     }}
     .stTabs [data-baseweb="tab"] {{
-        padding: 10px 18px;
+        padding: 12px 20px;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.92rem;
         border-radius: 8px 8px 0 0;
-        color: {INK_MUTED};
+        color: {INK_MUTED} !important;
         transition: color 0.15s ease, background-color 0.15s ease;
+    }}
+    .stTabs [data-baseweb="tab"] p {{
+        color: inherit !important;
+        font-size: inherit !important;
     }}
     .stTabs [aria-selected="true"] {{
         color: {BRAND_RED} !important;
         background-color: #FCE9E6 !important;
         border-bottom: 2px solid {BRAND_RED} !important;
+    }}
+    .stTabs [data-baseweb="tab-panel"] {{
+        padding-top: 1.5rem;
     }}
 
     /* 8. Math and Content Cards */
@@ -294,11 +325,11 @@ sol = st.session_state.solution
 # HEADER & METADATA BADGES
 # ==========================================
 st.markdown(f"""
-<img src="data:image/png;base64,{LOGO_B64}" style="height:2.6em; border-radius:6px; margin-bottom:0.5rem;" />
+<img src="data:image/png;base64,{LOGO_B64}" class="gopal-logo" />
 <div class="main-header">Team Capacity & Client Allocation Model</div>
 <div class="tagline">for companies that wanna go somewhere <em>fast</em></div>
+<div class="sub-header">How go, pal! allocates its own team across client engagements to maximize contribution margin — solved exclusively with IBM ILOG CPLEX.</div>
 """, unsafe_allow_html=True)
-st.markdown('<div class="sub-header">How go, pal! allocates its own team across client engagements to maximize contribution margin — solved exclusively with IBM ILOG CPLEX.</div>', unsafe_allow_html=True)
 
 # Metadata Pills
 header_num_consultants = len(st.session_state.capacities_df)
@@ -377,7 +408,7 @@ if solve_clicked:
     st.toast("Optimization solved successfully with IBM ILOG CPLEX!", icon="✅")
     st.rerun()
 
-st.markdown("<div style='margin-bottom: 0.75rem;'></div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-bottom: 1.5rem;'></div>", unsafe_allow_html=True)
 
 # ==========================================
 # REVERSED TABS INTERFACE
